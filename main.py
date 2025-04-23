@@ -253,6 +253,4 @@ try:
 except Exception as e:
     print(f"Erreur: {e}")
 finally:
-    # Ensure clean shutdown
     print("Bot arrêté.")
-    app.stop()
