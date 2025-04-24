@@ -78,13 +78,15 @@ async def auto_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     chat_id = str(update.effective_chat.id)
     data = load_data()
-    
+
+    # Enregistrement du groupe automatiquement
+    if chat_id not in data["groups"]:
+        data["groups"][chat_id] = {"enabled": False, "delay": 3}
+        save_data(data)
+
     # Commande /on dans groupe
     if update.message.text == "/on":
-        if chat_id not in data["groups"]:
-            data["groups"][chat_id] = {"enabled": True, "delay": 3}
-        else:
-            data["groups"][chat_id]["enabled"] = True
+        data["groups"][chat_id]["enabled"] = True
         save_data(data)
         await update.message.reply_text("Auto-suppression activée.")
         return
@@ -94,12 +96,8 @@ async def auto_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = update.message.text.split()
         if len(parts) == 2 and parts[1].isdigit():
             delay = int(parts[1])
-            if chat_id not in data["groups"]:
-                data["groups"][chat_id] = {"enabled": True, "delay": delay}
-            else:
-                data["groups"][chat_id]["delay"] = delay
-                if "enabled" not in data["groups"][chat_id]:
-                    data["groups"][chat_id]["enabled"] = True
+            data["groups"][chat_id]["delay"] = delay
+            data["groups"][chat_id].setdefault("enabled", True)
             save_data(data)
             await update.message.reply_text(f"Délai défini à {delay} sec.")
             return
@@ -124,12 +122,14 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     print(f"[CANAL] Message détecté dans canal {chat_id} : {text[:30]}...")
 
+    # Enregistrement du canal automatiquement
+    if chat_id not in data["groups"]:
+        data["groups"][chat_id] = {"enabled": False, "delay": 3}
+        save_data(data)
+
     # Commande /on dans canal
     if text == "/on":
-        if chat_id not in data["groups"]:
-            data["groups"][chat_id] = {"enabled": True, "delay": 3}
-        else:
-            data["groups"][chat_id]["enabled"] = True
+        data["groups"][chat_id]["enabled"] = True
         save_data(data)
         await context.bot.send_message(chat_id=chat_id, text="Auto-suppression activée.")
         return
@@ -139,19 +139,15 @@ async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE
         parts = text.split()
         if len(parts) == 2 and parts[1].isdigit():
             delay = int(parts[1])
-            if chat_id not in data["groups"]:
-                data["groups"][chat_id] = {"enabled": True, "delay": delay}
-            else:
-                data["groups"][chat_id]["delay"] = delay
-                if "enabled" not in data["groups"][chat_id]:
-                    data["groups"][chat_id]["enabled"] = True
+            data["groups"][chat_id]["delay"] = delay
+            data["groups"][chat_id].setdefault("enabled", True)
             save_data(data)
             await context.bot.send_message(chat_id=chat_id, text=f"Délai défini à {delay} sec.")
 
     # Suppression auto canal
     conf = data["groups"].get(chat_id, {})
     if conf.get("enabled", False):
-        delay = conf.get("delay", 3)  # Délai par défaut de 3 secondes
+        delay = conf.get("delay", 3)
         print(f"[CANAL] Suppression programmée dans {delay}s")
         await asyncio.sleep(delay)
         try:
@@ -223,9 +219,10 @@ async def broadcast_pub(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
+    groupes = [k for k in data['groups'] if str(k).startswith("-100")]
     await update.message.reply_text(
-        f"Groupes/Canaux : {len(data['groups'])}\n"
-        f"Utilisateurs : {len(data['users'])}\n"
+        f"Groupes/Canaux enregistrés : {len(data['groups'])}\n"
+        f"Utilisateurs uniques : {len(data['users'])}\n"
         f"Admins : {len(data['admins'])}"
     )
 
